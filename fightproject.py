@@ -75,25 +75,21 @@ decrease_df = decrease_df.sort_values(["Fighter", "Year"]).groupby("Fighter").fi
 increase_df = increase_df[increase_df.index.get_level_values('Year') >= 1993]
 decrease_df = decrease_df[decrease_df.index.get_level_values('Year') >= 1993]
 
-# 1. Sort by index (Fighter then Year) to ensure chronological order
+#identify weight differences across years
 increase_df = increase_df.sort_index()
 decrease_df = decrease_df.sort_index()
-# 2. Calculate the difference between consecutive years per fighter
 weight_diffs = increase_df.groupby(level='Fighter')[['Min_Weight', 'Max_Weight']].diff().fillna(0)
 weight_diffs_D = decrease_df.groupby(level='Fighter')[['Min_Weight', 'Max_Weight']].diff().fillna(0)
 #print(weight_diffs)
-# 3. Create a flag: True if either column increased (> 0)
 increase_df['weight_increased'] = (weight_diffs > 0).any(axis=1)
 decrease_df['weight_decreased'] = (weight_diffs_D < 0).any(axis=1)
 
+#identify treatment groups
 growth_groups = increase_df.groupby(level='Fighter')['weight_increased'].any()
 growth_groups_D = decrease_df.groupby(level='Fighter')['weight_decreased'].any()
 #It would be nice to weight heavier weight changes more heavily in the analysis
-
-#identify treatment groups
 infty_control = growth_groups[growth_groups == False].index.tolist()
 infty_control_D = growth_groups_D[growth_groups_D == False].index.tolist()
-
 increase_counts_per_fighter = increase_df.groupby(level='Fighter')['weight_increased'].sum()
 decrease_counts_per_fighter = decrease_df.groupby(level='Fighter')['weight_decreased'].sum()
 
@@ -104,10 +100,10 @@ multi_decrease_fighters = decrease_counts_per_fighter[decrease_counts_per_fighte
 increase_df = increase_df.reset_index()
 decrease_df = decrease_df.reset_index()
 
+#dataframes of monotonic fighters with only one treatment year
 increase_df = increase_df[~increase_df['Fighter'].isin(multi_increase_fighters['Fighter'])]
 decrease_df = decrease_df[~decrease_df['Fighter'].isin(multi_decrease_fighters['Fighter'])]
-
-#build treatment_groups
+#for visuallizing them...
 year_groups = increase_df[increase_df['weight_increased']].reset_index().groupby('Year')['Fighter'].unique()
 year_groups_D = decrease_df[decrease_df['weight_decreased']].reset_index().groupby('Year')['Fighter'].unique()
 
@@ -132,11 +128,11 @@ has_post_init = grouping_init.apply(lambda g: (g['Match_year'] > g['Treat_year']
 has_pre_init  = grouping_init.apply(lambda g: (g['Match_year'] < g['Treat_year']).any())
 is_treated_init = grouping_init['Treated'].max()
 fighters_init = (is_treated_init == 0) | (has_post_init & has_pre_init)
-# add back   but trying to keep as much data as possible
+
+#updated dataframe filtered to ensure pre and post treament observations and have all original columns
 increase_df = increase_df[increase_df['Fighter'].isin(fighters_init.index)]
 
 #make output variable columns
-
 increase_df['Armbar'] = np.where((increase_df['Method'] == 'Armbar') & (increase_df['W/L'] == 'W'), 1, 0)
 increase_df['Triangle'] = np.where((increase_df['Method'] == 'Triangle') & (increase_df['W/L'] == 'W'), 1, 0)
 increase_df['RNC'] = np.where((increase_df['Method'] == 'RNC') & (increase_df['W/L'] == 'W'), 1, 0)
@@ -159,14 +155,14 @@ is_treated = grouping['Treated'].max()
 sub_fighters = (is_treated == 0) | (has_post & has_pre)
 increase_sub_df = increase_sub_df[increase_sub_df['Fighter'].isin(sub_fighters.index)]
 
-
-#ONLY ONE YEAR
+#RESTRICT TO ONLY ONE YEAR
 #print(increase_sub_df['Treat_year'].value_counts())
 increase_df_year = increase_df[(increase_df['Treat_year'] == 2022) | (increase_df['Treat_year'] == np.inf)] 
 increase_df_year['post_treatment'] = (increase_df_year['Match_year'] > increase_df_year['Treat_year']).astype(int)
 increase_df_year['unit'] = increase_df_year['Fighter']
 increase_df_year['group'] = increase_df_year['Treated']
 
+#debugging, checking post treament observations
 dummy = increase_df_year.loc[increase_df_year['Treated'] == 1, 'Fighter']
 dummy2 = dummy.nunique()
 #print("Number of treated fighters in the year", dummy2)
@@ -174,13 +170,9 @@ dummy2 = dummy.nunique()
 #print(increase_df_year[increase_df_year["event_time"] > 0]["event_time"].value_counts().sort_index())
 
 
-#this one had significant data for Sub increase
+#exclude t = 0 as reference year becuase it's a mixture year, rather than an exact treatment time? nah, sticking with -1, think about it more later maybe
 
-
-
-#exclude t = 0 becuase it's a mixture year, rather than an exact treatment time?
-
-#DECREASE BATCH
+#DECREASE BATCH- doing all the same things I just did for the increase fighters for those that were monotonic decreasing
 
 decrease_treated_df = pd.merge(year_groups_df, df_b3, on='Fighter', how='left').rename(columns= {'Year_x': 'Treat_year', 'Year_y': 'Match_year'})
 decrease_treated_df['Match_year'] = decrease_treated_df['Match_year'].astype(int)
@@ -197,10 +189,7 @@ has_post_init_D = grouping_init_D.apply(lambda g: (g['Match_year'] > g['Treat_ye
 has_pre_init_D  = grouping_init_D.apply(lambda g: (g['Match_year'] < g['Treat_year']).any())
 is_treated_init_D = grouping_init_D['Treated'].max()
 fighters_init_D = (is_treated_init_D == 0) | (has_post_init_D & has_pre_init_D)
-# add back   but trying to keep as much data as possible
 decrease_df = decrease_df[decrease_df['Fighter'].isin(fighters_init_D.index)]
-
-#make output variable columns
 
 decrease_df['Armbar'] = np.where((increase_df['Method'] == 'Armbar') & (decrease_df['W/L'] == 'W'), 1, 0)
 decrease_df['Triangle'] = np.where((increase_df['Method'] == 'Triangle') & (decrease_df['W/L'] == 'W'), 1, 0)
@@ -224,13 +213,13 @@ is_treated_D = grouping['Treated'].max()
 sub_fighters_D = (is_treated_D == 0) | (has_post_D & has_pre_D)
 decrease_sub_df = decrease_sub_df[decrease_sub_df['Fighter'].isin(sub_fighters_D.index)]
 
-
 #ONLY ONE YEAR
 #print(increase_sub_df['Treat_year'].value_counts())
 decrease_df_year = decrease_df[(decrease_df['Treat_year'] == 2022) | (decrease_df['Treat_year'] == np.inf)] 
 decrease_df_year['post_treatment'] = (decrease_df_year['Match_year'] > decrease_df_year['Treat_year']).astype(int)
 decrease_df_year['unit'] = decrease_df_year['Fighter']
 decrease_df_year['group'] = decrease_df_year['Treated']
+
 
 #METHODS APPLICATIONS
 
@@ -293,8 +282,10 @@ plt.xlabel("Event Time (years relative to treatment)")
 plt.ylabel("Effect on y")
 plt.legend()
 plt.show()
+'''
 
-
+#Staggered Difference in Differences for all treatment groups
+'''
 result = cp.StaggeredDifferenceInDifferences(
     increase_df,
     formula="Sub_W ~ 1 + C(Fighter) + (Treated * post) + C(Match_year)",
@@ -314,13 +305,10 @@ result = cp.StaggeredDifferenceInDifferences(
     ),
 )
 print(result.summary())
-
-choke from back looked the most promising, up for increase, down for decrease?
-+  + C(event_bin) 
-make sure you understand what if any covariates are coming in with this formula, think about which covariates you would like to use and match with if you could
-
-fig, ax = result.plot() 
 '''
+#+  + C(event_bin) for using the time group pooling
+#fig, ax = result.plot() 
+
 
 #FREQUENCY OF FINISHES AGAINST WEIGHT
 '''
@@ -350,9 +338,3 @@ plt.show()
 
 #print(method_freq(df_b3, 'Armbar', ))
 '''
-
-#issue: general submission frequency is going down as weight goes up, normalize for this by considering output variable as rate of chosen method / all methods 
-#maybe clean up the general trend data and try to minimize the impact of the outliers in the best-fit line
-#maybe aggregate all groups and get a raw difference in differences
-
-#aggregate stuff to look at just: are submissions harder to get in higher weight classes? look at overall submission frequency
