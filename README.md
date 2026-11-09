@@ -1,4 +1,7 @@
 # DiD-on-BJJ-match-data
+
+UPDATE: I have completely reworked this project from the ground up (same ideas and general strategy, just cleaned everything up and used Claude to streamline the code), see this updated version in my other repository. I am leaving this up as an artifact of my original thoughts, strategies, and implementation attempt. 
+
 This project uses both staggered and standard Difference in Differences approaches in CausalPy to perform causal inference analyses on BJJ Match data. 
 
 Most of the model implementation is commented out to so I can de-bug the data handling aspect and then test models with it one at a time. I just sub out the appropriate variables for the implementations to test different analyses. 
