@@ -4,3 +4,5 @@ This project uses both staggered and standard Difference in Differences approach
 Most of the model implementation is commented out to so I can de-bug the data handling aspect and then test models with it one at a time. I just sub out the appropriate variables for the implementations to test different analyses. 
 
 See the wiki for more details on the bugs, issues, and work to be done on this project!
+
+Data from the repository https://github.com/rdreese89/Web-Scraper was used for this project, many thanks to the creator for such a cool tool!
